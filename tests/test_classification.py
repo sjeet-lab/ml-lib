@@ -101,9 +101,11 @@ class TestKNeighborsClassifier:
         """Tests that predict before fit raises a RuntimeError."""
         X, _ = sample_data
         model = KNeighborsClassifier()
-        with pytest.raises(
-            RuntimeError, match="This KNeighborsClassifier instance is not fitted yet."
-        ):
+        expected_msg = (
+            "This KNeighborsClassifier instance is not fitted yet. "
+            "Call 'fit' with appropriate arguments before using this estimator."
+        )
+        with pytest.raises(RuntimeError, match=expected_msg):
             model.predict(X)
 
     def test_invalid_n_neighbors(self):

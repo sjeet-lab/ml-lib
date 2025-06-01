@@ -34,8 +34,8 @@ class TestDBSCAN:
         expected_labels = [0, -1, -1, 0, 0, 0, -1]  # From docstring
         expected_n_clusters = 1  # From docstring
 
-        assert dbs.n_clusters == expected_n_clusters
-        np.testing.assert_array_equal(dbs.labels, expected_labels)
+        assert dbs.n_clusters_ == expected_n_clusters
+        np.testing.assert_array_equal(dbs.labels_, expected_labels)
         assert n_clusters_returned == expected_n_clusters
         np.testing.assert_array_equal(labels_returned, expected_labels)
 

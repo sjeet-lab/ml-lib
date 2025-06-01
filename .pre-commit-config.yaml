@@ -22,3 +22,25 @@ repos:
     # Potentially add ruff-format if you want to use Ruff for formatting instead of Black
     # -   id: ruff-format
     #     args: [--line-length=88]
+-   repo: https://github.com/PyCQA/bandit
+    rev: 1.7.9 # Use a recent version of bandit (matches pip installed 1.7.9, though latest is 1.8.3 - using what was specified)
+    hooks:
+    -   id: bandit
+        args: ["-s", "B101,B301"] # Skip assert_used (B101) and pickle (B301)
+        types: [python] # Ensure bandit only runs on python files
+        # Consider adjusting '-s' based on initial scan results.
+
+# It's generally not recommended to run pytest on every commit for all files
+# as it can be slow. A common pattern is to run it on changed files or before push.
+# However, to fulfill the request:
+-   repo: local
+    hooks:
+    -   id: pytest
+        name: pytest
+        entry: poetry run pytest
+        language: system
+        types: [python]
+        pass_filenames: false # pytest will discover files itself
+        # To run only on changed test files or files related to changed src files,
+        # more complex scripting or a different pre-commit hook strategy might be needed.
+        # For now, this will run the full test suite.

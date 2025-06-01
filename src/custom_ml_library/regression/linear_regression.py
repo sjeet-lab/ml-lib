@@ -1,4 +1,4 @@
-"""Linear Regression model."""
+"""Linear Regression model using Ordinary Least Squares."""
 
 import numpy as np
 import polars as pl
@@ -72,12 +72,12 @@ class LinearRegression:
                 xtx_inv = np.linalg.pinv(xtx)
 
             beta = xtx_inv @ X_np.T @ y_np
-        except np.linalg.LinAlgError:
+        except np.linalg.LinAlgError as exc:
             # Fallback or error reporting if pinv also fails, though pinv is robust.
             raise ValueError(
                 "Failed to compute coefficients. This may be due to multicollinearity"
                 " or other numerical issues."
-            )
+            ) from exc
 
         if self.fit_intercept:
             self.intercept_ = beta[0]
@@ -110,7 +110,7 @@ class LinearRegression:
             raise RuntimeError(
                 "This LinearRegression instance is not fitted yet. Call 'fit' with "
                 "appropriate arguments before using this estimator."
-            )
+            ) from None  # Added 'from None'
 
         X_np = X.to_numpy()
         if X_np.ndim == 1:
