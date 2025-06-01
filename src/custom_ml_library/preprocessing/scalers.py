@@ -1,4 +1,10 @@
-"""Scalers for preprocessing data."""
+"""Feature scaling transformers.
+
+This module includes common feature scalers:
+- StandardScaler: Standardizes features by removing the mean and scaling to unit variance.
+- MinMaxScaler: Scales features to a given range (e.g., 0-1).
+- RobustScaler: Scales features using statistics robust to outliers (median and IQR).
+"""
 
 import polars as pl
 import numpy as np # Added for RobustScaler docstring example

@@ -1,4 +1,9 @@
-"""Preprocessing utilities for the Custom ML Library."""
+"""Data preprocessing tools for the Custom ML Library.
+
+This module provides a suite of tools for preparing data for machine learning models,
+including feature scaling, normalization, encoding of categorical features,
+and imputation of missing values.
+"""
 # This file makes the preprocessing directory a Python package.
 
 from .scalers import MinMaxScaler, RobustScaler, StandardScaler
