@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "custom-ml-library"
+version = "0.1.0"
+description = "A custom machine learning library built from scratch."
+authors = ["Jules <jules@example.dev>"] # Placeholder
+license = "MIT"
+readme = "README.md"
+packages = [{include = "custom_ml_library", from = "src"}]
+
+[tool.poetry.dependencies]
+python = ">=3.10" # Changed from >=3.8 to >=3.10
+# Dependencies like polars and numpy will be added by 'poetry add'
+polars = "^1.30.0"
+numpy = "^2.2.6"
+scipy = "^1.15.3"
+
+[tool.poetry.group.dev.dependencies]
+# Dev dependencies like pytest, black, ruff, pre-commit will be added by 'poetry add'
+pytest = "^8.3.5"
+black = "^25.1.0"
+ruff = "^0.11.12"
+pre-commit = "^4.2.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
