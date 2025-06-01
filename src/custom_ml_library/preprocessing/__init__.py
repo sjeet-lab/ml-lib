@@ -2,6 +2,6 @@
 
 # This file makes the preprocessing directory a Python package.
 
-from .scalers import StandardScaler, MinMaxScaler
+from .scalers import MinMaxScaler, StandardScaler
 
 __all__ = ["StandardScaler", "MinMaxScaler"]

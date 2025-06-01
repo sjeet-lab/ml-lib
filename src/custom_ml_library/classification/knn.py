@@ -1,6 +1,7 @@
 """K-Nearest Neighbors Classifier."""
 
 from collections import Counter
+
 import numpy as np
 import polars as pl
 

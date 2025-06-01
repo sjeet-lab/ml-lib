@@ -1,7 +1,7 @@
 """Tests for clustering algorithms."""
 
-import pytest
 import numpy as np  # Add numpy import
+import pytest
 
 from custom_ml_library.cluster import DBSCAN
 

@@ -8,21 +8,27 @@ readme = "README.md"
 packages = [{include = "custom_ml_library", from = "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.10" # Changed from >=3.8 to >=3.10
-# Dependencies like polars and numpy will be added by 'poetry add'
+python = ">=3.10"
 polars = "^1.30.0"
 numpy = "^2.2.6"
 scipy = "^1.15.3"
 
 [tool.poetry.group.dev.dependencies]
-# Dev dependencies like pytest, black, ruff, pre-commit will be added by 'poetry add'
 pytest = "^8.3.5"
 black = "^25.1.0"
 ruff = "^0.11.12"
 pre-commit = "^4.2.0"
-pylint = "^3.1.0" # Manually adding pylint
-bandit = "^1.8.3" # Manually adding bandit
+pylint = "^3.1.0"
+bandit = "^1.8.3"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+# Ruff configuration
+[tool.ruff]
+line-length = 88 # Match Black's default line length
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"] # Ensure "I" (isort rules) are selected.
+# Removed [tool.ruff.lint.isort] section

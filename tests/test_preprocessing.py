@@ -4,7 +4,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from custom_ml_library.preprocessing import StandardScaler, MinMaxScaler
+from custom_ml_library.preprocessing import MinMaxScaler, StandardScaler
 
 
 class TestStandardScaler:

@@ -1,9 +1,9 @@
 """Custom ML Library main package."""
 
 from .classification import KNeighborsClassifier
+from .cluster import DBSCAN  # Added DBSCAN as it is now moved.
 from .preprocessing import MinMaxScaler, StandardScaler
 from .regression import LinearRegression
-from .cluster import DBSCAN  # Added DBSCAN as it is now moved.
 from .utils import euclidean_distance
 
 __all__ = [
