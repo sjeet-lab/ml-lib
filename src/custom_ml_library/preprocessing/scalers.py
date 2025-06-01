@@ -1,6 +1,8 @@
 """Scalers for preprocessing data."""
 
 import polars as pl
+import numpy as np # Added for RobustScaler docstring example
+from typing import Tuple, List, Optional # Added for RobustScaler type hints
 
 
 class StandardScaler:
@@ -198,3 +200,189 @@ class MinMaxScaler:
           Polars DataFrame, the transformed data.
         """
         return self.fit(X).transform(X)
+
+
+class RobustScaler:
+    """Scale features using statistics that are robust to outliers.
+
+    This Scaler removes the median and scales the data according to the
+    quantile range (defaults to IQR: Interquartile Range).
+    The IQR is the range between the 1st quartile (25th quantile) and
+    the 3rd quartile (75th quantile).
+
+    Centering and scaling happen independently on each feature by computing
+    the relevant statistics on the samples in the training set. Median and
+    quantile range are then stored to be used on later data using the
+    `transform` method.
+
+    Args:
+        with_centering (bool, default=True):
+            If True, center the data before scaling.
+        with_scaling (bool, default=True):
+            If True, scale the data to interquartile range.
+        quantile_range (Tuple[float, float], default=(25.0, 75.0)):
+            Quantile range used to calculate `scale_`.
+            Must be between 0 and 100.
+
+    Attributes:
+        center_ (pl.DataFrame, optional):
+            The median value for each feature in the training set.
+            Stored when `with_centering` is True.
+        scale_ (pl.DataFrame, optional):
+            The (scaled) interquartile range for each feature in the training set.
+            Stored when `with_scaling` is True.
+        n_features_in_ (int):
+            Number of features seen during `fit`.
+        feature_names_in_ (List[str]):
+            Names of features seen during `fit`.
+    """
+
+    def __init__(self, *,
+                 with_centering: bool = True,
+                 with_scaling: bool = True,
+                 quantile_range: Tuple[float, float] = (25.0, 75.0)):
+        if not (0.0 <= quantile_range[0] < quantile_range[1] <= 100.0):
+            raise ValueError(
+                "Invalid quantile_range: "
+                f"{quantile_range}. Values must be between 0 and 100, "
+                "and q_min < q_max."
+            )
+        self.with_centering = with_centering
+        self.with_scaling = with_scaling
+        self.quantile_range = quantile_range
+        self.center_: Optional[pl.DataFrame] = None
+        self.scale_: Optional[pl.DataFrame] = None
+        self.n_features_in_: Optional[int] = None
+        self.feature_names_in_: Optional[List[str]] = None
+
+    def fit(self, X: pl.DataFrame, y: Optional[pl.DataFrame] = None):
+        """Compute the median and quantile range to be used for later scaling.
+
+        Args:
+            X (pl.DataFrame): The data used to compute the median and
+                interquartile range. Shape (n_samples, n_features).
+            y (pl.DataFrame, optional): Ignored. Present for API consistency.
+
+        Returns:
+            self: Fitted scaler.
+        """
+        if not isinstance(X, pl.DataFrame):
+            raise TypeError(f"Expected Polars DataFrame, got {type(X)}")
+        if X.is_empty():
+            # Handle empty DataFrame input: set attributes to indicate no fitting.
+            self.n_features_in_ = 0
+            self.feature_names_in_ = []
+            self.center_ = pl.DataFrame() if self.with_centering else None
+            self.scale_ = pl.DataFrame() if self.with_scaling else None
+            return self
+
+
+        self.n_features_in_ = X.shape[1]
+        self.feature_names_in_ = X.columns
+
+        if self.with_centering:
+            self.center_ = X.median() # Polars DataFrame.median() gives a 1-row DF
+
+        if self.with_scaling:
+            q_min, q_max = self.quantile_range
+            # Polars quantile expects value between 0.0 and 1.0
+            quantiles_min = X.quantile(q_min / 100.0)
+            quantiles_max = X.quantile(q_max / 100.0)
+
+            self.scale_ = quantiles_max - quantiles_min
+
+            # Handle cases where scale is zero (e.g., constant feature)
+            # Create a boolean mask for zero scale values
+            # This needs to be done carefully if self.scale_ could be empty
+            if self.scale_.is_empty(): # Should not happen if X was not empty
+                 pass # Or set to an empty DF with correct schema if possible
+            else:
+                zero_scale_mask_exprs = []
+                for c_name in self.scale_.columns:
+                    # Ensure we're comparing with appropriate dtype if necessary
+                    # For numeric types, direct comparison with 0 should be fine.
+                    zero_scale_mask_exprs.append((pl.col(c_name) == 0).alias(c_name))
+
+                if zero_scale_mask_exprs: # If there are columns to process
+                    zero_scale_mask = self.scale_.select(zero_scale_mask_exprs)
+
+                    # Update scale_: where mask is True, set to 1.0, else keep original
+                    update_scale_exprs = []
+                    for c_name in self.scale_.columns:
+                        original_col_dtype = self.scale_[c_name].dtype
+                        update_scale_exprs.append(
+                            pl.when(zero_scale_mask[c_name])
+                            .then(pl.lit(1.0, dtype=original_col_dtype))
+                            .otherwise(self.scale_[c_name])
+                            .alias(c_name)
+                        )
+                    if update_scale_exprs:
+                        self.scale_ = self.scale_.select(update_scale_exprs)
+        return self
+
+    def transform(self, X: pl.DataFrame) -> pl.DataFrame:
+        """Center and scale the data.
+
+        Args:
+            X (pl.DataFrame): The data to transform. Shape (n_samples, n_features).
+
+        Returns:
+            pl.DataFrame: The transformed data.
+
+        Raises:
+            RuntimeError: If the scaler has not been fitted yet.
+            ValueError: If the number of features in X is different from fit or names differ.
+        """
+        if self.n_features_in_ is None:
+            raise RuntimeError("Scaler has not been fitted yet. Call fit first.")
+        if X.shape[1] != self.n_features_in_:
+            raise ValueError(
+                f"X has {X.shape[1]} features, but {self.__class__.__name__} "
+                f"was fitted with {self.n_features_in_} features."
+            )
+        # Ensure column order and names match what was seen in fit
+        # This is a stricter check than just set equality of names.
+        if list(X.columns) != list(self.feature_names_in_):
+            raise ValueError(
+                "Feature names or order of X do not match those seen during fit. "
+                f"Expected: {self.feature_names_in_}, Got: {X.columns}"
+            )
+
+        X_transformed = X.clone() # Avoid modifying original DataFrame
+
+        if self.with_centering:
+            if self.center_ is None: # Should not happen if fitted and with_centering
+                raise RuntimeError("Scaler not fitted or not fitted with centering.")
+            if self.center_.is_empty() and self.n_features_in_ > 0 : # Fitted on empty data with features
+                 raise RuntimeError("Scaler fitted on empty data; center is undefined for transformation.")
+            if not self.center_.is_empty():
+                X_transformed = X_transformed.select([
+                    (pl.col(c_name) - self.center_.item(0, c_name)).alias(c_name)
+                    for c_name in X_transformed.columns
+                ])
+
+
+        if self.with_scaling:
+            if self.scale_ is None: # Should not happen if fitted and with_scaling
+                raise RuntimeError("Scaler not fitted or not fitted with scaling.")
+            if self.scale_.is_empty() and self.n_features_in_ > 0:
+                raise RuntimeError("Scaler fitted on empty data; scale is undefined for transformation.")
+            if not self.scale_.is_empty():
+                X_transformed = X_transformed.select([
+                    (pl.col(c_name) / self.scale_.item(0, c_name)).alias(c_name)
+                    for c_name in X_transformed.columns
+                ])
+
+        return X_transformed
+
+    def fit_transform(self, X: pl.DataFrame, y: Optional[pl.DataFrame] = None) -> pl.DataFrame:
+        """Fit to data, then transform it.
+
+        Args:
+            X (pl.DataFrame): The data to fit and transform.
+            y (pl.DataFrame, optional): Ignored. Present for API consistency.
+
+        Returns:
+            pl.DataFrame: Transformed data.
+        """
+        return self.fit(X, y).transform(X)
